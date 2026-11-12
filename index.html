@@ -283,16 +283,34 @@ h3{font-size:20px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+/* 학번 입력 · 전송 */
+.sid-in{width:100%;max-width:220px;font-size:32px;text-align:center;letter-spacing:8px;font-family:var(--f-display)}
+.sid-msg{margin:0;min-height:1.4em;font-weight:600}
+.send-st{margin:8px 0 0;font-size:14px;background:#fff;border:2px dashed var(--ink);border-radius:12px;padding:6px 10px;display:inline-block}
+@media (max-width:420px){.top-in{gap:6px}.icon-btn{padding:4px 7px;font-size:14px}.logo{font-size:19px}}
 </style>
 </head>
 <body>
 <header class="top"><div class="top-in">
   <button type="button" class="logo" id="homeBtn" aria-label="처음 화면"><b>똑똑</b>공부방</button>
   <nav class="crumb" id="crumb" aria-label="현재 위치"></nav>
+  <button type="button" class="icon-btn" id="whoBtn" hidden>👤 학번</button>
   <button type="button" class="icon-btn" id="noteBtn">📒 오답</button>
 </div></header>
 <main class="wrap" id="app"></main>
 <div id="print-area"></div>
+<script>
+/* ===== 선생님 설정 =====
+   sheetUrl : 구글 시트 Apps Script "웹 앱" 주소를 따옴표 안에 붙여 넣으세요.
+              (https://script.google.com/macros/s/..../exec)
+              비워 두면 학번 입력과 점수 전송 기능이 꺼져요.
+   askOnStart : true면 처음 들어올 때 학번을 물어봐요. */
+const CONFIG = {
+  sheetUrl: 'https://script.google.com/macros/s/AKfycbzV-juafpNezlv-RY68lvXx7aUHGmrGsQ2zuLgX3Ez8Bta9T-nlZO67tnvAZk36vrb5/exec',
+  askOnStart: true
+};
+
+</script>
 <script>
 /* ===== 똑똑 공부방 : 공통 도구 ===== */
 'use strict';
@@ -417,8 +435,8 @@ function rulerSVG(len,start=0){ // cm 자
 }
 
 /* ---------- 저장소 ---------- */
-const Store={get(k,d){try{const v=localStorage.getItem('ddok_'+k);return v?JSON.parse(v):d;}catch(e){return d;}},
-  set(k,v){try{localStorage.setItem('ddok_'+k,JSON.stringify(v));}catch(e){}}};
+const Store={mem:{},get(k,d){try{const v=localStorage.getItem('ddok_'+k);if(v)return JSON.parse(v);}catch(e){}return k in this.mem?JSON.parse(this.mem[k]):d;},
+  set(k,v){this.mem[k]=JSON.stringify(v);try{localStorage.setItem('ddok_'+k,this.mem[k]);}catch(e){}}};
 
 /* ---------- 발음(음성 합성) ---------- */
 const TTS={voices:[],rate:Store.get('rate',0.85),voiceName:Store.get('voice',''),
@@ -882,7 +900,7 @@ addUnits(3,'math',[
   {k:'calc',w:2,f(){const a=R(101,500),c=R(a+100,999);return C(`<span class="big">${a} + □ = ${c}</span>`,c-a,`□ = ${c} - ${a}`);}},
   {k:'calc',w:1,f(){const a=R(200,800),b=R(100,a);const e=Math.round((a-b)/100)*100;return MC('calc',`${a} - ${b} 를 어림한 값으로 가장 알맞은 것은?`,`약 ${e}`,[`약 ${e+200}`,`약 ${Math.max(0,e-200)}`,`약 ${e+400}`],`${Math.round(a/100)*100} - ${Math.round(b/100)*100} ≈ ${e}`);}},
   {k:'word',w:3,f(){const a=R(250,600),b=R(150,999-a);return W(`도서관에 동화책이 ${a}권, 위인전이 ${b}권 있어요. 동화책과 위인전은 모두 몇 권일까요?`,a+b,'권',`${a} + ${b} = ${a+b}`);}},
-  {k:'word',w:3,f(){const a=R(400,999),b=R(150,a-50);return W(`줄넘기 대회에서 ${J(nm(),'은는')} ${a}번, ${J(nm(),'은는')} ${b}번을 넘었어요. 두 사람이 넘은 횟수의 차는 몇 번일까요?`,a-b,'번',`${a} - ${b} = ${a-b}`);}},
+  {k:'word',w:3,f(){const a=R(400,999),b=R(150,a-50),[p,q]=names(2);return W(`줄넘기 대회에서 ${J(p,'은는')} ${a}번, ${J(q,'은는')} ${b}번을 넘었어요. 두 사람이 넘은 횟수의 차는 몇 번일까요?`,a-b,'번',`${a} - ${b} = ${a-b}`);}},
   {k:'word',w:2,f(){const a=R(500,900),b=R(100,300),c=R(100,300);return W(`과일 가게에 사과가 ${a}개 있었어요. 오전에 ${b}개, 오후에 ${c}개 팔았어요. 남은 사과는 몇 개일까요?`,a-b-c,'개',`${a} - ${b} - ${c} = ${a-b-c}`);}},
   {k:'word',w:2,f(){const x=R(300,600),a=R(120,280);return W(`어떤 수에 ${a}을(를) 더해야 할 것을 잘못하여 뺐더니 ${x-a}이(가) 되었어요. 바르게 계산하면 얼마일까요?`,x+a,'',`어떤 수: ${x-a} + ${a} = ${x} → ${x} + ${a} = ${x+a}`,{extra:{hint:'잘못 계산한 것을 거꾸로 하여 어떤 수를 먼저 구해요.'}});}},
   {k:'word',w:2,f(){const ds=sample(range(1,9),3);const s=[...ds].sort((a,b)=>b-a),big=+s.join(''),small=+[...s].reverse().join('');return W(`숫자 카드 ${ds.map(d=>`[${d}]`).join(' ')}를 한 번씩 사용하여 만든 가장 큰 세 자리 수와 가장 작은 세 자리 수의 합은?`,big+small,'',`${big} + ${small} = ${big+small}`);}}
@@ -2270,10 +2288,12 @@ function viewHome(){
    <div class="tools">
      <a class="tool sticker" href="#note" style="text-decoration:none;color:inherit"><span class="em">📒</span><div><b>오답 노트</b><span>틀린 문제 ${note}개 다시 풀기</span></div></a>
      <button type="button" class="tool sticker" id="openSet"><span class="em">🔊</span><div><b>영어 발음 설정</b><span>목소리와 빠르기 고르기</span></div></button>
+     ${sheetOn()?`<button type="button" class="tool sticker" id="openWho"><span class="em">👤</span><div><b>${Student.get()?Student.label(Student.get()):'학번 입력하기'}</b><span>${Student.get()?'학번 바꾸기':'시험 점수가 선생님께 전송돼요'}</span></div></button>`:''}
    </div>
    <p class="muted" style="font-size:13px;margin:0">2022 개정 교육과정의 학년군 성취기준을 바탕으로 단원을 구성했어요. 영어는 교육과정상 3학년부터 시작하며, 1·2학년 영어는 놀이처럼 익히는 맛보기 단원이에요. 학습 기록은 이 기기의 브라우저에만 저장돼요.</p>
   </div>`;
   document.getElementById('openSet').onclick=openSettings;
+  const ow=document.getElementById('openWho');if(ow)ow.onclick=()=>openLogin(()=>{if(curHash==='home')viewHome();});
 }
 /* 학년 → 과목 */
 function viewGrade(g){
@@ -2343,7 +2363,8 @@ function panelTest(u,p){
    <label>문제 유형<select id="tk"><option value="all">섞어서</option>${Object.entries(kinds).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label></div>
    <div class="row"><button type="button" class="btn primary" id="tgo">시험 시작! ⏱️</button></div>
    <p class="muted" style="margin:0">최고 점수: ${best(u.id)!=null?best(u.id)+'점 '+stars(best(u.id)):'아직 없어요'}</p></div>`;
-  p.querySelector('#tgo').onclick=()=>runTest(u,p,+p.querySelector('#tn').value,p.querySelector('#tk').value);
+  const start=()=>runTest(u,p,+p.querySelector('#tn').value,p.querySelector('#tk').value);
+  p.querySelector('#tgo').onclick=()=>{if(sheetOn()&&!Student.get())openLogin(start,'학번을 입력하면 시험 점수가 선생님께 전송돼요.');else start();};
 }
 function runTest(u,p,n,kind){
   const qs=genQs(u,n,kind);qs.forEach(q=>q.subj=u.subj);const t0=Date.now();
@@ -2368,7 +2389,8 @@ function runTest(u,p,n,kind){
     const score=Math.round(right/cards.length*100);const sec=Math.floor((Date.now()-t0)/1000);
     const prev=best(u.id);if(prev==null||score>prev)Store.set('best_'+u.id,score);
     const medal=score>=90?'🏆':score>=70?'🥇':score>=50?'🥈':'🌱';const msg=score>=90?'정말 훌륭해요!':score>=70?'잘했어요! 조금만 더!':score>=50?'좋아요, 틀린 문제를 다시 봐요.':'개념을 한 번 더 익히고 다시 도전해요!';
-    const res=h(`<div class="result sticker"><div class="medal">${medal}</div><div class="pt">${score}점</div>${stars(score)}<p>${cards.length}문제 중 ${right}문제 정답 · 걸린 시간 ${Math.floor(sec/60)}분 ${sec%60}초<br>${msg}</p>
+    const sent=sendResult(u,cards,right,score,sec);
+    const res=h(`<div class="result sticker"><div class="medal">${medal}</div><div class="pt">${score}점</div>${stars(score)}<p>${cards.length}문제 중 ${right}문제 정답 · 걸린 시간 ${Math.floor(sec/60)}분 ${sec%60}초<br>${msg}</p>${sent}
       <div class="row" style="justify-content:center"><button type="button" class="btn" id="again">다시 시험 보기</button>${!u.noLearn?`<a class="btn" href="#u-${u.id}-${u.subj==='eng'?'words':'learn'}" style="text-decoration:none;color:inherit">개념 다시 보기</a>`:''}</div></div>`);
     p.querySelector('.sticky-bot').remove();p.querySelector('#tconf').innerHTML='';p.querySelector('.stack').prepend(res);res.querySelector('#again').onclick=()=>panelTest(u,p);
     window.scrollTo({top:0,behavior:'smooth'});
@@ -2465,6 +2487,63 @@ function viewNote(){
   render();
 }
 
+/* ---------- 학번 & 구글 시트 전송 ---------- */
+const sheetOn=()=>typeof CONFIG!=='undefined'&&!!CONFIG.sheetUrl;
+const sessionStorageGet=k=>{try{return sessionStorage.getItem('ddok_'+k);}catch(e){return null;}};
+const sessionStorageSet=k=>{try{sessionStorage.setItem('ddok_'+k,'1');}catch(e){}};
+const Student={
+  parse(v){v=String(v||'').trim();if(!/^[1-6][1-9]\d\d$/.test(v)||+v.slice(2)<1)return null;return {sid:v,grade:+v[0],cls:+v[1],num:+v.slice(2)};},
+  get(){return this.parse(Store.get('sid',''));},
+  label(p){return p?`${p.grade}학년 ${p.cls}반 ${p.num}번`:'';},
+  set(v){Store.set('sid',v||'');updateWho();}
+};
+const Sync={
+  busy:false,
+  q(){return Store.get('sendq',[]);},
+  push(rec){const q=this.q();q.push(rec);Store.set('sendq',q.slice(-300));return this.flush();},
+  async flush(){
+    if(!sheetOn()||this.busy)return false;const q=this.q();if(!q.length)return true;this.busy=true;let ok=false;
+    try{await fetch(CONFIG.sheetUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({records:q.slice(0,50)})});
+      Store.set('sendq',this.q().slice(Math.min(q.length,50)));ok=true;}catch(e){}
+    this.busy=false;if(ok&&this.q().length)return this.flush();return ok;
+  }
+};
+window.addEventListener('online',()=>Sync.flush());
+function updateWho(){
+  const b=document.getElementById('whoBtn');if(!b)return;
+  b.hidden=!sheetOn();const p=Student.get();b.textContent=p?'👤 '+p.sid:'👤 학번';b.setAttribute('aria-label',p?Student.label(p)+' (학번 바꾸기)':'학번 입력하기');
+}
+function openLogin(onDone,why){
+  const cur=Student.get();
+  const m=h(`<div class="modal-bg"><div class="modal sticker" role="dialog" aria-label="학번 입력"><h2>👤 학번을 입력해요</h2>
+   ${why?`<p style="margin:0">${why}</p>`:''}
+   <p class="muted" style="margin:0">학년 1자리 + 반 1자리 + 번호 2자리<br>예) 1학년 1반 1번 → <b>1101</b>, 3학년 2반 15번 → <b>3215</b></p>
+   <input class="ans-in sid-in" id="sidIn" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="1101" value="${cur?cur.sid:''}" aria-label="학번 4자리">
+   <p id="sidMsg" class="sid-msg">${cur?'✅ '+Student.label(cur):'&nbsp;'}</p>
+   <div class="row"><button type="button" class="btn primary" id="sidOk">확인</button><button type="button" class="btn" id="sidLater">${cur?'닫기':'나중에 할게요'}</button>${cur?'<button type="button" class="btn small" id="sidOut">학번 지우기</button>':''}</div>
+   <p class="muted" style="margin:0;font-size:13px">시험을 보면 점수가 선생님께 전송돼요. 이름은 보내지 않아요.</p></div></div>`);
+  document.body.appendChild(m);
+  const inp=m.querySelector('#sidIn'),msg=m.querySelector('#sidMsg');
+  const close=()=>{m.remove();onDone&&onDone(Student.get());};
+  inp.oninput=()=>{inp.value=inp.value.replace(/\D/g,'').slice(0,4);const p=Student.parse(inp.value);
+    msg.innerHTML=p?'✅ '+Student.label(p):inp.value.length===4?'❌ 학번을 다시 확인해요 (학년 1~6, 반 1~9, 번호 01~99)':'&nbsp;';};
+  const ok=()=>{const p=Student.parse(inp.value);if(!p){msg.innerHTML='❌ 학번 4자리를 바르게 써요. 예) 1101';inp.focus();return;}Student.set(p.sid);toast(Student.label(p)+' 반가워요!');close();};
+  m.querySelector('#sidOk').onclick=ok;inp.onkeydown=e=>{if(e.key==='Enter')ok();};
+  m.querySelector('#sidLater').onclick=close;
+  const out=m.querySelector('#sidOut');if(out)out.onclick=()=>{Student.set('');toast('학번을 지웠어요');close();};
+  m.onclick=e=>{if(e.target===m)close();};
+  setTimeout(()=>inp.focus(),50);
+}
+function sendResult(u,cards,right,score,sec){
+  if(!sheetOn())return '';
+  const p=Student.get();
+  if(!p)return `<p class="send-st">📮 학번을 입력하지 않아서 선생님께 점수가 전송되지 않았어요.</p>`;
+  const strip=s=>String(s||'').replace(/<[^>]+>/g,' ').replace(/&[a-z]+;/g,' ').replace(/\s+/g,' ').trim();
+  const wrong=cards.map((c,i)=>check(c.q,c.resp())?null:`${i+1}번: ${strip(c.q.q).slice(0,40)}`).filter(Boolean).join('\n');
+  Sync.push({t:Date.now(),sid:p.sid,grade:p.grade,cls:p.cls,num:p.num,subj:SUBJ[u.subj].name,ugrade:u.grade,unit:u.mix?u.title:`${u.sem} ${u.no||''}. ${u.title}`,type:u.mix?'학기 종합':'단원 평가',n:cards.length,right,score,sec,wrong});
+  return `<p class="send-st">📮 ${Student.label(p)} 점수를 선생님께 보냈어요.</p>`;
+}
+
 /* ---------- 설정 ---------- */
 function openSettings(){
   const vs=TTS.enVoices();
@@ -2498,7 +2577,10 @@ window.addEventListener('DOMContentLoaded',()=>{
   for(const g in DB)for(const s in DB[g]){const c={};DB[g][s].forEach(u=>{c[u.sem]=(c[u.sem]||0)+1;u.no=c[u.sem];});}
   document.getElementById('homeBtn').onclick=()=>go('home');
   document.getElementById('noteBtn').onclick=()=>go('note');
+  document.getElementById('whoBtn').onclick=()=>openLogin(()=>{if(curHash==='home')viewHome();});
+  updateWho();
   route();
+  if(sheetOn()){Sync.flush();if(CONFIG.askOnStart&&!Student.get()&&!sessionStorageGet('asked')){sessionStorageSet('asked');openLogin(()=>{if(curHash==='home')viewHome();});}}
 });
 
 </script>
