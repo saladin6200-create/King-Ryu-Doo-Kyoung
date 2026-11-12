@@ -1,0 +1,17 @@
+{
+  "name": "똑똑 공부방",
+  "short_name": "똑똑공부방",
+  "description": "초등 1~4학년 국어·수학·영어 개념 학습, 연습 문제, 시험",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFF9EC",
+  "theme_color": "#FFD23F",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
